@@ -18,6 +18,7 @@ class GameUiState {
     required this.totalCollectibles,
     required this.objective,
     required this.status,
+    required this.persiaRescued,
   });
 
   final GamePhase phase;
@@ -25,17 +26,18 @@ class GameUiState {
   final int totalCollectibles;
   final String objective;
   final String status;
+  final bool persiaRescued;
 }
 
 class SavingPersiaGame extends FlameGame with KeyboardEvents {
   static const double worldWidth = 640;
-  static const double worldHeight = 180;
+  static const double worldHeight = 360;
   static const double viewportWidth = 320;
   static const double viewportHeight = 180;
 
   final Level level = Level(
     size: Vector2(worldWidth, worldHeight),
-    spawnPoint: Vector2(32, worldHeight - 48),
+    spawnPoint: Vector2(32, 316),
   );
   late final Player player;
   final ValueNotifier<GameUiState> uiState = ValueNotifier(
@@ -43,16 +45,18 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
       phase: GamePhase.playing,
       collectedCount: 0,
       totalCollectibles: 0,
-      objective: 'Collect the scarves and rescue Persia.',
-      status: 'Move with arrows or A/D. Jump with space.',
+      objective: 'Collect the scarves, free Persia, then reach the van.',
+      status: 'Use the D-pad or WASD. Avoid patrol guards.',
+      persiaRescued: false,
     ),
   );
 
   double _horizontalInput = 0;
-  bool _jumpQueued = false;
+  double _verticalInput = 0;
   GamePhase _phase = GamePhase.playing;
   int _collectedCount = 0;
-  String _status = 'Move with arrows or A/D. Jump with space.';
+  bool _persiaRescued = false;
+  String _status = 'Use the D-pad or WASD. Avoid patrol guards.';
 
   bool get isPlaying => _phase == GamePhase.playing;
 
@@ -78,18 +82,16 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
     _syncUiState();
   }
 
-  void setHorizontalInput(double input) {
+  void setMovementInput({
+    required double horizontal,
+    required double vertical,
+  }) {
     if (!isPlaying) {
       return;
     }
-    _horizontalInput = input.clamp(-1.0, 1.0);
-  }
 
-  void queueJump() {
-    if (!isPlaying) {
-      return;
-    }
-    _jumpQueued = true;
+    _horizontalInput = horizontal.clamp(-1.0, 1.0);
+    _verticalInput = vertical.clamp(-1.0, 1.0);
   }
 
   void collectScarf(Collectible collectible) {
@@ -101,10 +103,11 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
     _collectedCount += 1;
 
     final remaining = level.totalCollectibles - _collectedCount;
-    _status = remaining == 0
-        ? 'All scarves secured. Reach Persia.'
-        : 'Scarf secured. $remaining left.';
-    _syncUiState();
+    _setStatus(
+      remaining == 0
+          ? 'All scarves secured. Reach Persia.'
+          : 'Crew scarf secured. $remaining left.',
+    );
   }
 
   void tryRescuePersia() {
@@ -112,18 +115,39 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
       return;
     }
 
+    if (_persiaRescued) {
+      return;
+    }
+
     final remaining = level.totalCollectibles - _collectedCount;
     if (remaining > 0) {
-      _status = remaining == 1
-          ? 'Need 1 more scarf before Persia can move.'
-          : 'Need $remaining more scarves before Persia can move.';
-      _syncUiState();
+      _setStatus(
+        remaining == 1
+            ? 'Need 1 more scarf before Persia can move.'
+            : 'Need $remaining more scarves before Persia can move.',
+      );
+      return;
+    }
+
+    _persiaRescued = true;
+    level.rescueTarget.rescue();
+    level.extractionZone.activate();
+    _setStatus('Persia is with you. Reach the van.');
+  }
+
+  void tryExtract() {
+    if (!isPlaying) {
+      return;
+    }
+
+    if (!_persiaRescued) {
+      _setStatus('Find Persia before heading to the van.');
       return;
     }
 
     _finish(
       phase: GamePhase.won,
-      status: 'Persia is safe. Mission complete.',
+      status: 'Persia is clear. Extraction complete.',
     );
   }
 
@@ -144,9 +168,10 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
 
     _phase = GamePhase.playing;
     _horizontalInput = 0;
-    _jumpQueued = false;
+    _verticalInput = 0;
     _collectedCount = 0;
-    _status = 'Collect the scarves and rescue Persia.';
+    _persiaRescued = false;
+    _status = 'Use the D-pad or WASD. Avoid patrol guards.';
 
     resumeEngine();
     _syncUiState();
@@ -156,9 +181,8 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
   void update(double dt) {
     player.applyInput(
       horizontalInput: _horizontalInput,
-      jumpRequested: _jumpQueued,
+      verticalInput: _verticalInput,
     );
-    _jumpQueued = false;
     super.update(dt);
   }
 
@@ -171,17 +195,15 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
         keysPressed.contains(LogicalKeyboardKey.keyA);
     final right = keysPressed.contains(LogicalKeyboardKey.arrowRight) ||
         keysPressed.contains(LogicalKeyboardKey.keyD);
+    final up = keysPressed.contains(LogicalKeyboardKey.arrowUp) ||
+        keysPressed.contains(LogicalKeyboardKey.keyW);
+    final down = keysPressed.contains(LogicalKeyboardKey.arrowDown) ||
+        keysPressed.contains(LogicalKeyboardKey.keyS);
 
-    setHorizontalInput((right ? 1 : 0) + (left ? -1 : 0));
-
-    if (event is KeyDownEvent) {
-      final isJumpKey = event.logicalKey == LogicalKeyboardKey.space ||
-          event.logicalKey == LogicalKeyboardKey.arrowUp ||
-          event.logicalKey == LogicalKeyboardKey.keyW;
-      if (isJumpKey) {
-        queueJump();
-      }
-    }
+    setMovementInput(
+      horizontal: (right ? 1 : 0) + (left ? -1 : 0),
+      vertical: (down ? 1 : 0) + (up ? -1 : 0),
+    );
 
     return KeyEventResult.handled;
   }
@@ -198,10 +220,19 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
   }) {
     _phase = phase;
     _horizontalInput = 0;
-    _jumpQueued = false;
+    _verticalInput = 0;
     _status = status;
     player.stop();
     pauseEngine();
+    _syncUiState();
+  }
+
+  void _setStatus(String status) {
+    if (_status == status) {
+      return;
+    }
+
+    _status = status;
     _syncUiState();
   }
 
@@ -212,22 +243,27 @@ class SavingPersiaGame extends FlameGame with KeyboardEvents {
       totalCollectibles: level.totalCollectibles,
       objective: _buildObjective(),
       status: _status,
+      persiaRescued: _persiaRescued,
     );
   }
 
   String _buildObjective() {
     if (_phase == GamePhase.won) {
-      return 'Persia rescued.';
+      return 'Persia extracted.';
     }
 
     if (_phase == GamePhase.lost) {
-      return 'Reset and try the route again.';
+      return 'Reset and run the route again.';
+    }
+
+    if (_persiaRescued) {
+      return 'Reach the van and extract Persia.';
     }
 
     if (_collectedCount >= level.totalCollectibles) {
-      return 'Reach Persia and complete the rescue.';
+      return 'Reach Persia and get him out.';
     }
 
-    return 'Collect ${level.totalCollectibles} scarves and rescue Persia.';
+    return 'Collect ${level.totalCollectibles} scarves, free Persia, then extract.';
   }
 }

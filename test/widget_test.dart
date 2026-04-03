@@ -11,8 +11,10 @@ void main() {
 
     expect(find.text('Mission: Save Persia'), findsOneWidget);
     expect(find.text('Scarves'), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_left), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_right), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_left), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_right), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsOneWidget);
   });
 }

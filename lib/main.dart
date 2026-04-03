@@ -10,23 +10,35 @@ void main() {
   runApp(const SavingPersiaApp());
 }
 
-class SavingPersiaApp extends StatelessWidget {
+class SavingPersiaApp extends StatefulWidget {
   const SavingPersiaApp({super.key});
+
+  @override
+  State<SavingPersiaApp> createState() => _SavingPersiaAppState();
+}
+
+class _SavingPersiaAppState extends State<SavingPersiaApp> {
+  late final SavingPersiaGame _game = SavingPersiaGame();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        body: GameWidget<SavingPersiaGame>(
-          game: SavingPersiaGame(),
-          overlayBuilderMap: {
-            ControlsOverlay.id: (context, game) => ControlsOverlay(game: game),
-            MissionOverlay.id: (context, game) => MissionOverlay(game: game),
-          },
-          initialActiveOverlays: const [
-            ControlsOverlay.id,
-            MissionOverlay.id,
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: AspectRatio(
+                aspectRatio: SavingPersiaGame.viewportWidth /
+                    SavingPersiaGame.viewportHeight,
+                child: GameWidget<SavingPersiaGame>(game: _game),
+              ),
+            ),
+            MissionOverlay(game: _game),
+            ControlsOverlay(game: _game),
           ],
         ),
       ),

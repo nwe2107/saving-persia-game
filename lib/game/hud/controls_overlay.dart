@@ -15,10 +15,16 @@ class ControlsOverlay extends StatefulWidget {
 class _ControlsOverlayState extends State<ControlsOverlay> {
   bool _leftHeld = false;
   bool _rightHeld = false;
+  bool _upHeld = false;
+  bool _downHeld = false;
 
-  void _updateHorizontalInput() {
-    final input = (_rightHeld ? 1 : 0) + (_leftHeld ? -1 : 0);
-    widget.game.setHorizontalInput(input.toDouble());
+  void _updateMovementInput() {
+    final horizontal = (_rightHeld ? 1 : 0) + (_leftHeld ? -1 : 0);
+    final vertical = (_downHeld ? 1 : 0) + (_upHeld ? -1 : 0);
+    widget.game.setMovementInput(
+      horizontal: horizontal.toDouble(),
+      vertical: vertical.toDouble(),
+    );
   }
 
   @override
@@ -29,41 +35,60 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
           Positioned(
             left: 12,
             bottom: 12,
-            child: Row(
+            child: Column(
               children: [
                 _HoldButton(
-                  icon: Icons.arrow_left,
+                  icon: Icons.keyboard_arrow_up,
                   onPressed: () {
-                    _leftHeld = true;
-                    _updateHorizontalInput();
+                    _upHeld = true;
+                    _updateMovementInput();
                   },
                   onReleased: () {
-                    _leftHeld = false;
-                    _updateHorizontalInput();
+                    _upHeld = false;
+                    _updateMovementInput();
                   },
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _HoldButton(
+                      icon: Icons.keyboard_arrow_left,
+                      onPressed: () {
+                        _leftHeld = true;
+                        _updateMovementInput();
+                      },
+                      onReleased: () {
+                        _leftHeld = false;
+                        _updateMovementInput();
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    _HoldButton(
+                      icon: Icons.keyboard_arrow_right,
+                      onPressed: () {
+                        _rightHeld = true;
+                        _updateMovementInput();
+                      },
+                      onReleased: () {
+                        _rightHeld = false;
+                        _updateMovementInput();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 _HoldButton(
-                  icon: Icons.arrow_right,
+                  icon: Icons.keyboard_arrow_down,
                   onPressed: () {
-                    _rightHeld = true;
-                    _updateHorizontalInput();
+                    _downHeld = true;
+                    _updateMovementInput();
                   },
                   onReleased: () {
-                    _rightHeld = false;
-                    _updateHorizontalInput();
+                    _downHeld = false;
+                    _updateMovementInput();
                   },
                 ),
               ],
-            ),
-          ),
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: _HoldButton(
-              icon: Icons.arrow_upward,
-              onPressed: () => widget.game.queueJump(),
-              onReleased: () {},
             ),
           ),
         ],
